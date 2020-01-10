@@ -26,4 +26,7 @@ setup(
         "License :: OSI Approved :: MIT License",
     	"Operating System :: Microsoft :: Windows",
     ],
+	scripts=[
+		"scripts/cpu_stress_test",
+	],
 )
