@@ -2,7 +2,7 @@
 ---
 kokos is a multi-use Python package which includes all of my public Python packages.
 
-Supports Python [3.7](https://www.python.org/downloads/release/python-370/ "Python 3.7") and [3.8](https://www.python.org/downloads/release/python-380/ "Python 3.8")
+Supports Python 3.
 
 ---
 Installation ([pip page](https://pypi.org/project/kokos/)):
