@@ -15,18 +15,26 @@ def Load():
 		bcrypt.hashpw(b"1234567890qwertyuiopasdfghjklzxcvbnm", bcrypt.gensalt())
 		times_looping += 1
 
-def Start(TIME=None, THREADS=None):
-	parser = argparse.ArgumentParser(description="CPU Stress Test")
-	parser.add_argument("-t", help="How much time the stress test will last (in seconds)", type=int, default=300, required=False)
-	parser.add_argument("-mt", help="The number of process the program will use", type=int, default=20, required=False)
-	args = parser.parse_args()
-	RETURN = True
-	if TIME == None:
-		RETURN = False
-		TIME = args.t
-	if THREADS == None:
-		RETURN = False
-		THREADS = args.mt
+def Start(TIME=None, THREADS=None, RETURN=False):
+	TIME_DEFAULT = 300
+	THREADS_DEFAULT = 20
+	if __name__ == "__main__":
+		parser = argparse.ArgumentParser(description="CPU Stress Test")
+		parser.add_argument("-t", help="How much time the stress test will last (in seconds)", type=int, default=TIME_DEFAULT, required=False)
+		parser.add_argument("-mt", help="The number of process the program will use", type=int, default=THREADS_DEFAULT, required=False)
+		args = parser.parse_args()
+		RETURN = True
+		if TIME == None:
+			RETURN = False
+			TIME = args.t
+		if THREADS == None:
+			RETURN = False
+			THREADS = args.mt
+	else:
+		if TIME == None:
+			TIME = TIME_DEFAULT
+		if THREADS == None:
+			THREADS = THREADS_DEFAULT
 	global start
 	global stop
 	global times_looping
