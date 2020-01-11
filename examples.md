@@ -1,7 +1,7 @@
 ## cpu_stress_test
 Stress test your CPU to see its performance and temperature (temperature not supported).
 
-> cpu_stress_test.Start(TIME=None, THREADS=None, RETURN=False)
+> cpu_stress_test.Start(TIME=300, THREADS=20, RETURN=False)
 
 The score is calculated based on how many strings manages to hash using the [bcrypt](https://www.google.com/search?q=bcrypt "bcrypt") hashing algorithm.
 
