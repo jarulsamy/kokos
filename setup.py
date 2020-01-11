@@ -15,7 +15,7 @@ setup(
 	long_description_content_type="text/markdown",
 	license=LICENSE,
 	py_packages=["cpu_stress_test"],
-	package_dir={"": "kokos"},
+	package_dir={"": "src"},
 	keywords="kokos package multi-use",
 	url="https://pypi.org/project/kokos/",
 	download_url="https://github.com/kokosxD/kokos/archive/master.zip",
