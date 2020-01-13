@@ -48,7 +48,6 @@ class File:
 			return
 		self.hash = None
 
-	# Calculate a hash based on hash_formula
 	def CalculateHash(self):
 		self.hash = hashlib.sha224(b"".join(str(data).encode() for data in [getattr(self, var) for var in self.hash_formula])).hexdigest()
 		return self.hash

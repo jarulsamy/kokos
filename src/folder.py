@@ -57,59 +57,34 @@ class Folder:
 				self.structure += "\n"
 		return self.structure
 
-	# request from the other objects to re-create hashes based on the "hash_formula"
-	# from this obecjt and return them to it without overwriting their own hash.
-	# the reason I want to make them return their hash without updating it, is becase
-	# this object can have differend "hash_formula" from the others. So if I want
-	# to make a hash based on hash_formula without changing the hash from the other
-	# obejcts, I have to do it this way. also find out how I will pass the "hash_formula"
-	# and "overwrite" without storing them as object-variables or breaking something.
-	def CalculateHash(self, hash_formula=None, overwrite=True):
+	def CalculateHash(self, hash_formula=None, overwrite=None):
 		if hash_formula == None:
 			hash_formula = self.hash_formula
+		if overwrite == None:
+			overwrite = False
+			first_folder = True
 		self.hash_data = b""
 		for var in self.hash_formula:
 			self.hash_data += str(getattr(self, var)).encode()
-
-
-
-
 		for folder in self.folders:
 			if not hasattr(folder, "hash"):
 				folder.CalculateHash(hash_formula=hash_formula, overwrite=overwrite)
 			self.hash_data += folder.hash.encode()
-
-
-
-
-
-
-
-		# based on the hash of this fof
 		for file in self.files:
 			self.hash_data.join(str(data).encode() for data in [getattr(file, var) for var in hash_formula])
-
-
-
-		if overwrite:
+		# Allows to create a hash for a folder without overwriting the hash from
+		# its subfolders if their "hash_formula" is different.
+		if overwrite or first_folder:
 			self.hash = hashlib.sha224(self.hash_data).hexdigest()
 			return self.hash
 		return hashlib.sha224(self.hash_data).hexdigest()
 
 	def CalculateSize(self):
-		# self.size = 0
-		# for path, folders, files in os.walk(self.dir):
-		# 	for file in files:
-		# 		self.size += os.path.getsize(os.path.join(path, file))
-
-
 		self.size = 0
 		for folder in self.folders:
 			self.size += folder.size
-
 		for file in self.files:
 			self.size += file.size
-
 		return self.size
 
 	def Delete(self, ignore_errors=True):

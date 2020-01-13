@@ -141,10 +141,22 @@ class FOF:
 			if not ignore_errors:
 				raise CannotUnpickleObject("\nCannot unpickle \"%s\" object" % __name__)
 
+	def CalculateHash(self):
+		self.hash_data = b""
+		for var in self.hash_formula:
+			self.hash_data += str(getattr(self, var)).encode()
+		for folder in self.folders:
+			if not hasattr(folder, "hash"):
+				folder.CalculateHash(hash_formula=self.hash_formula, overwrite=False)
+			self.hash_data += folder.hash.encode()
+		for file in self.files:
+			self.hash_data.join(str(data).encode() for data in [getattr(file, var) for var in hash_formula])
+		self.hash = hashlib.sha224(self.hash_data).hexdigest()
+		return self.hash
+
 	def Delete(self):
 		self.__del__()
 
-	# add CreateHash()
 	def __eq__(self, other):
 		if self.hash == None:
 			self.CalculateHash()
