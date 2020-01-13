@@ -14,13 +14,17 @@ setup(
 	long_description=README,
 	long_description_content_type="text/markdown",
 	license=LICENSE,
-	py_packages=["cpu_stress_test"],
+	py_packages=[
+		"cpu_stress_test",
+		"fof_management",
+	],
 	package_dir={"": "src"},
 	keywords="kokos package multi-use",
-	url="https://pypi.org/project/kokos/",
+	url="https://github.com/kokosxD/kokos",
 	download_url="https://github.com/kokosxD/kokos/archive/master.zip",
 	install_requires=[
 		"bcrypt>=3.1.7",
+		"datetime>=4.3",
 	],
 	project_urls={
 		"Documentation": "https://github.com/kokosxD/kokos/blob/master/README.md",
