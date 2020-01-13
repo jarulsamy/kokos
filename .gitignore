@@ -2,3 +2,6 @@ __pycache__
 *.txt
 test*
 /files
+fof_management.py
+*.pickle
+data*
