@@ -88,6 +88,7 @@ class FOF:
 							f.write(path, os.path.basename(path))
 				else:
 					pickle.dump(self, f)
+				File(dir=path).Delete()
 				return True
 		except PermissionError:
 			if compress:
@@ -104,7 +105,7 @@ class FOF:
 				File(dir=path).Delete()
 			if not ignore_errors:
 				raise CannotZipObject("\nSomething went wrong, cannot Zip \"%s\" object" % __name__)
-			return False
+		return False
 
 	# w = overwrite
 	# r = return
