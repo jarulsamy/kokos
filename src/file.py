@@ -3,30 +3,42 @@ import win32security
 from pywintypes import error as win32error
 import hashlib
 import shutil
+from copy import copy
 import os
+
+# Arguments
+# ------------------------------------------------------------------------------
+class ArgumentNotExist(Exception):
+	pass
+
+class ArgumentRequired(Exception):
+	pass
+
+class WrongArgumentType(Exception):
+	pass
+# ------------------------------------------------------------------------------
+
+# Other
+# ------------------------------------------------------------------------------
+class FileNotExist(Exception):
+	pass
+
+class PermissionDenied(Exception):
+	pass
+# ------------------------------------------------------------------------------
 
 class File:
 
-	# See why_only_named_arguments.md
 	def __init__(self, **kwargs):
-		self.required = ["dir"]
-		self.optional = {"calculate_hash": False, "hash_formula": ["dir", "name", "ext", "size", "content", "owner"], "max_file_size": 10000}
-		for optional in self.optional:
-			setattr(self, optional, self.optional[optional])
-		for key, value in kwargs.items():
-			if key in list(self.optional) + self.required:
-				if key == "hash_formula" and self.calculate_hash:
-					setattr(self, key, sorted(set(list(value))))
-				elif key == "adding_action":
-					setattr(self, key, value.lower())
-				else:
-					setattr(self, key, value)
-		for required in self.required:
-			if not hasattr(self, required):
-				raise ArgumentRequired("\nArgument \"%s\" is required" % required)
+
+		# Set arguments
+		kwargs["overwrite"] = True
+		self.SetArguments(**kwargs)
+
+		# Other
 		self.name = os.path.basename(self.dir)
 		self.ext = os.path.splitext(self.name)[1]
-		self.size = os.stat(self.dir).st_size
+		self.size = os.path.getsize(self.dir)
 		if self.size < self.max_file_size:
 			try:
 				with open(self.dir, "r", errors="ignore") as f:
@@ -43,15 +55,95 @@ class File:
 		except win32error:
 			self.owner = None
 		self.permissions = int(oct(os.stat(self.dir).st_mode)[-3:])
-		if self.calculate_hash:
-			self.CalculateHash()
-			return
-		self.hash = None
+		self.CalculateHash()
+
+	def SetArguments(self, **kwargs):
+
+		# Set default arguments (where None is required)
+		self.arguments = {
+			"dir": [None, [str]],
+			"hash_formula": [["dir", "name", "ext", "size", "content", "owner"], [list, str]],
+			"adding_action": ["s", [str]],
+			"max_file_size": [10000, [int]],
+			"max_depth": [3, [int]],
+			"overwrite": [False, [bool]],
+		}
+
+		# Check if all required arguments are passed
+		for key, value in self.arguments.items():
+			if value[0] == None and key not in kwargs:
+				raise ArgumentRequired("\nArgument \"%s\" is required" % key)
+
+		# overwrite all arguments to default
+		if "overwrite" in kwargs and kwargs["overwrite"]:
+			for argument in self.arguments:
+				if self.arguments[argument][0] != None:
+					setattr(self, argument, self.arguments[argument][0])
+
+		# set any passed arguments
+		for key, value in kwargs.items():
+			if key not in self.arguments:
+				raise ArgumentNotExist("\nArgument \"%s\" does not exist" % (key))
+			if isinstance(value, tuple(self.arguments[key][1])):
+				# checks
+
+				# If an argument can be string or list and its not list, make it list
+				if list in self.arguments[key][1] and not isinstance(key, list):
+					value = list(value)
+
+				# If directory is not valid
+				if key == "dir":
+					try:
+						if not os.path.isfile(value):
+							raise FileNotExist("\nFile \"%s\" does not exist" % value)
+					except TypeError:
+						raise FileNotExist("\nFile can't be blank")
+
+				# Check if "hash_formula" elements are valid
+				if key == "hash_formula":
+					value = [data.lower() for data in value]
+					value.sort()
+					for data in copy(value):
+						if data in ["ext", "content"]:
+							value.remove(data)
+							continue
+						if not isinstance(data, str):
+							raise WrongArgumentType("\nArgument element's type \"%s\" for \"%s\" in \"%s\" is incorrect" % (type(data), data, value))
+						if data not in [
+							"dir",
+							"name",
+							"created",
+							"modified",
+							"accessed",
+							"owner",
+							"pc_name",
+							"pc_number",
+							"permissions",
+							"hash",
+							"size",
+							"ext",
+							"content"
+						]:
+							raise WrongArgument("\nArgument element \"%s\" for \"%s\" is incorrect" % (data, value))
+
+				# Make adding_action lowercase
+				if key == "adding_action":
+					value = value.lower()
+
+				# Set attribute
+				setattr(self, key, value)
+				continue
+			raise WrongArgumentType("\nArgument type \"%s\" for \"%s\" is incorrect" % (type(value), value))
 
 	def CalculateHash(self):
 		self.hash = hashlib.sha224(b"".join(str(data).encode() for data in [getattr(self, var) for var in self.hash_formula])).hexdigest()
 		return self.hash
 
+	# Virtual delete
+	# def Delete(self):
+	# 	self.__del__()
+
+	# Actual delete
 	def Delete(self, ignore_errors=True):
 		try:
 			os.remove(self.dir)
@@ -90,7 +182,6 @@ class File:
 				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
 		return False
 
-	# Compare 2 files to see if are equal based on their hashes
 	def __eq__(self, other):
 		if self.hash == None:
 			self.CalculateHash()
@@ -98,11 +189,33 @@ class File:
 			other.CalculateHash()
 		return self.hash == other.hash
 
+	def __ne__(self, other):
+		return self.hash != other.hash
+
+	# def __contains__(self, other):
+	# 	if isinstance(other, list):
+	# 		pass
+	# 	elif isinstance(other, Folder):
+	# 		return self in other.files
+	# 	raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (other.__name__, "in"))
+
+	def __add__(self, other):
+		pass
+
+	def __sub__(self, other):
+		pass
+
+	def __iadd__(self, other):
+		pass
+
+	def __isub__(self, other):
+		pass
+
+	def __bool__(self):
+		return os.path.exists(self.dir)
+
 	def __repr__(self):
 		return self.name
 
 	def __str__(self):
 		return self.__repr__()
-
-	def __bool__(self):
-		return os.path.exists(self.dir)

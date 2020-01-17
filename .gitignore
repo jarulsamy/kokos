@@ -1,7 +1,9 @@
 __pycache__
 *.txt
 test*
-/files
+files
+old
+fof_rewrite
 fof_management.py
 *.pickle
 data*
