@@ -275,23 +275,22 @@ class Folder:
 		return False
 
 	def CreateStructure(self, depth=0):
-		self.structure = "├%s%s" % ("".join("──" for i in range(depth)), self.name)
+		self.structure = "%s/" % self.name
 		self.depth = depth + 1
 		if self.folders != [] or self.files != []:
 			self.structure += "\n"
 		for folder in self.folders:
-			self.structure += folder.CreateStructure(self.depth)
-			if self.folders.index(folder) != self.folders.index(self.folders[-1]) or self.files != []:
-				self.structure += "\n"
+			for line in folder.CreateStructure(self.depth).split("\n"):
+				self.structure += "%s%s\n" % ("│   ", line)
 		for file in self.files:
-			self.structure += "├%s%s" % ("".join("──" for i in range(self.depth)), file.name)
+			self.structure += "%s── %s " % ("├" if self.files.index(file) != self.files.index(self.files[-1]) else "└", file.name)
 			if self.files.index(file) != self.files.index(self.files[-1]):
 				self.structure += "\n"
 		return self.structure
 
 	# Virtual delete
 	# def Delete(self):
-	# 	self.__del__()
+		# self.__del__()
 
 	# Actual delete
 	def Delete(self, ignore_errors=True):
