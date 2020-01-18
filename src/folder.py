@@ -251,7 +251,7 @@ class Folder:
 		try:
 			if uncompress:
 				with zipfile.ZipFile(os.path.join(os.path.dirname(path), "%s.zip" % os.path.splitext(os.path.basename(path))[0]), "r") as f:
-					f.extract(os.path.basename(path))
+					f.extract(os.path.basename(path), os.path.dirname(path))
 			with open(path, "rb") as f:
 				if loading_action == "w":
 					obj = pickle.load(f)
