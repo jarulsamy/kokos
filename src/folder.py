@@ -6,6 +6,7 @@ from datetime import datetime
 from copy import copy
 import pickle
 import zipfile
+import inspect
 import os
 try:
 	from file import File
@@ -61,6 +62,9 @@ class WrongArgument(Exception):
 
 class CannotZipObject(Exception):
 	pass
+
+class ERROR404(Exception):
+	pass
 # ------------------------------------------------------------------------------
 
 class Folder:
@@ -92,6 +96,7 @@ class Folder:
 				pass
 
 		# Other
+		self.fof = self.folders + self.files
 		self.name = os.path.basename(self.dir)
 		self.created = datetime.fromtimestamp(os.path.getctime(self.dir))
 		self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
@@ -336,47 +341,73 @@ class Folder:
 		pass
 
 	def PrayToGod(self):
-		raise ERROR404("\nLogic Not Found...")
+		raise ERROR404("\n\nInstance \"God\" does not exist...\nDid you mean \"Dog\"?")
 
+	def CheckInstanceValidation(self, other):
+		if not isinstance(other, (Folder, File)):
+			raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (type(other).__name__, inspect.stack()[1][3]))
+
+	# ==
 	def __eq__(self, other):
-		if self.hash == None:
-			self.CalculateHash()
-		if other.hash == None:
-			other.CalculateHash()
+		self.CheckInstanceValidation(other)
 		return self.hash == other.hash
 
+	# !=
 	def __ne__(self, other):
+		self.CheckInstanceValidation(other)
 		return self.hash != other.hash
 
+	# in
 	def __contains__(self, other):
-		if isinstance(other, list):
-			for element in other:
-				if isinstance(element, Folder):
-					return element in other.folders
-				elif isinstance(element, File):
-					return element in self.files
-				elif isinstance(element, FOF):
-					return other in self.folders + self.files
-		elif isinstance(other, Folder):
+		self.CheckInstanceValidation(other)
+		if isinstance(other, Folder):
 			return other in self.folders
 		elif isinstance(other, File):
 			return other in self.files
-		elif isinstance(other, fof.FOF):
-			return other in self.folders + self.files
-		raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (type(other).__name__, "in"))
 
+	# +
 	def __add__(self, other):
-		pass
+		self.CheckInstanceValidation(other)
+		obj = copy(self)
+		obj.folders += other.folders
+		obj.files += other.files
+		return obj
 
+	# -
 	def __sub__(self, other):
-		pass
+		self.CheckInstanceValidation(other)
+		obj = copy(self)
+		for folder in other.folders:
+			for f in obj.folders:
+				if folder.name == f.name:
+					obj.folders.remove(f)
+		for file in other.files:
+			for f in obj.files:
+				if file.name == f.name:
+					obj.files.remove(f)
+		return obj
 
+	# +=
 	def __iadd__(self, other):
-		pass
+		self.CheckInstanceValidation(other)
+		self.folders += other.folders
+		self.files += other.files
+		return self
 
+	# -=
 	def __isub__(self, other):
-		pass
+		self.CheckInstanceValidation(other)
+		for folder in other.folders:
+			for f in self.folders:
+				if folder.name == f.name:
+					self.folders.remove(f)
+		for file in other.files:
+			for f in self.files:
+				if file.name == f.name:
+					self.files.remove(f)
+		return self
 
+	# []
 	def __getitem__(self, key):
 		for folder in self.folders:
 			if folder.name == key:
@@ -388,14 +419,17 @@ class Folder:
 	def __missing__(self, key):
 		return
 
+	# len()
 	def __len__(self):
 		return len(self.folders + self.files)
 
+	# bool()
 	def __bool__(self):
 		return self.folders != [] and self.files != []
 
 	def __repr__(self):
 		return self.name
 
+	# str()
 	def __str__(self):
 		return self.__repr__()

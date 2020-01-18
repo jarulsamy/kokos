@@ -5,6 +5,7 @@ import hashlib
 import shutil
 from copy import copy
 import os
+import folder
 
 # Arguments
 # ------------------------------------------------------------------------------
@@ -182,37 +183,23 @@ class File:
 				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
 		return False
 
+	def CheckInstanceValidation(self, other):
+		if not isinstance(other, (folder.Folder, File)):
+			raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (type(other).__name__, inspect.stack()[1][3]))
+
+	# ==
 	def __eq__(self, other):
-		if self.hash == None:
-			self.CalculateHash()
-		if other.hash == None:
-			other.CalculateHash()
+		self.CheckInstanceValidation(other)
 		return self.hash == other.hash
 
+	# !=
 	def __ne__(self, other):
+		self.CheckInstanceValidation(other)
 		return self.hash != other.hash
 
-	# def __contains__(self, other):
-	# 	if isinstance(other, list):
-	# 		pass
-	# 	elif isinstance(other, Folder):
-	# 		return self in other.files
-	# 	raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (other.__name__, "in"))
-
-	def __add__(self, other):
-		pass
-
-	def __sub__(self, other):
-		pass
-
-	def __iadd__(self, other):
-		pass
-
-	def __isub__(self, other):
-		pass
-
+	# bool()
 	def __bool__(self):
-		return os.path.exists(self.dir)
+		return os.path.isfile(self.dir)
 
 	def __repr__(self):
 		return self.name
