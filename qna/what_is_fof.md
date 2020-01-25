@@ -2,8 +2,8 @@
 ---
 **FOF** stands for
 
-* **F**iles
+* **F**ile
 * **O**r
-* **F**olders
+* **F**older
 
 I found **FOF** both faster and easier to remember than **"Files Or Folders"**.
