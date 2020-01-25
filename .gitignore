@@ -3,7 +3,10 @@ __pycache__
 test*
 files
 old
+sudoku_backup
 fof_rewrite
 fof_management.py
 *.pickle
 data*
+.kokos
+benchmark*
