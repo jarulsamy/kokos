@@ -10,8 +10,8 @@ import inspect
 import os
 try:
 	from file import File
-except ModuleNotFoundError:
-	from src.file import File
+except (ModuleNotFoundError, ImportError):
+	pass
 
 # Arguments
 # ------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ class WrongArgumentType(Exception):
 	pass
 # ------------------------------------------------------------------------------
 
-# Does not exist
+# Not exist
 # ------------------------------------------------------------------------------
 class DirectoryNotExist(Exception):
 	pass
@@ -33,7 +33,7 @@ class DirectoryNotExist(Exception):
 class AttributeNotExist(Exception):
 	pass
 
-class ActionDoesNotExist(Exception):
+class ActionNotExist(Exception):
 	pass
 
 class FileNotExist(Exception):
@@ -64,6 +64,12 @@ class CannotZipObject(Exception):
 	pass
 
 class ERROR404(Exception):
+	pass
+
+class CannotInitializeDirectory(Exception):
+	pass
+
+class CannotTrackChanges(Exception):
 	pass
 # ------------------------------------------------------------------------------
 
@@ -96,7 +102,6 @@ class Folder:
 				pass
 
 		# Other
-		self.fof = self.folders + self.files
 		self.name = os.path.basename(self.dir)
 		self.created = datetime.fromtimestamp(os.path.getctime(self.dir))
 		self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
@@ -108,6 +113,7 @@ class Folder:
 		self.permissions = int(oct(os.stat(self.dir).st_mode)[-3:])
 		self.CalculateHash()
 		self.CalculateSize()
+		self.GetFOFNum()
 		return self.folders, self.files
 
 	def SetArguments(self, **kwargs):
@@ -118,9 +124,10 @@ class Folder:
 			"hash_formula": [["dir", "name", "ext", "size", "content", "owner"], [list, str]],
 			"adding_action": ["s", [str]],
 			"loading_action": ["w", [str]],
-			"max_file_size": [10000, [int]],
+			"max_file_size": [1000000, [int]],
 			"max_depth": [3, [int]],
 			"overwrite": [False, [bool]],
+			"required": [True, [bool]],
 		}
 
 		# Overwrite all arguments to default
@@ -129,9 +136,13 @@ class Folder:
 				setattr(self, key, value[0])
 
 		# Check if all required arguments are passed
-		for key, value in self.arguments.items():
-			if value[0] == None and key not in kwargs:
-				raise ArgumentRequired("\nArgument \"%s\" is required" % key)
+		try:
+			if kwargs["required"]:
+				raise KeyError
+		except KeyError:
+			for key, value in self.arguments.items():
+				if value[0] == None and key not in kwargs:
+					raise ArgumentRequired("\nArgument \"%s\" is required" % key)
 
 		# Set any passed arguments
 		for key, value in kwargs.items():
@@ -150,12 +161,6 @@ class Folder:
 							raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % value)
 					except TypeError:
 						raise DirectoryNotExist("\nDirectory can't be blank")
-
-				# Check if "loading_action" is valid
-				if key == "loading_action":
-					value = value.lower()
-					if value not in ["w", "r"]:
-						raise ArgumentNotExist("\nArgument \"%s\" for \"%s\" is not valid" % (value, key))
 
 				# Check if "hash_formula" elements are valid
 				if key == "hash_formula":
@@ -188,6 +193,17 @@ class Folder:
 					if value not in ["w", "a", "s"]:
 						raise ActionNotExist("\nAdding action \"%s\" does not exist" % value)
 
+				# Check if "loading_action" is valid
+				if key == "loading_action":
+					value = value.lower()
+					if value not in ["w", "r"]:
+						raise ActionNotExist("\nLoading action \"%s\" does not exist" % loading_action)
+
+				if key == "action_type":
+					value = value.lower()
+					if value not in ["virtual", "actual"]:
+						raise ActionNotExist("\\nAction type \"%s\" for \"%s\" is incorrect" % (value, "action_type"))
+
 				# Set attribute
 				setattr(self, key, value)
 				continue
@@ -203,28 +219,39 @@ class Folder:
 		return arguments
 
 	def CalculateHash(self):
-		self.hash_data = b""
+		self.hash_data = ""
 		for var in self.hash_formula:
 			try:
-				self.hash_data += str(getattr(self, var)).encode()
+				self.hash_data += str(getattr(self, var))
 			except AttributeError:
 				pass
 		for folder in self.folders:
-			if not hasattr(folder, "hash"):
-				folder.CalculateHash(hash_formula=self.hash_formula, overwrite=False)
-			self.hash_data += folder.hash.encode()
+			self.hash_data += folder.hash
 		for file in self.files:
-			self.hash_data.join(str(data).encode() for data in [getattr(file, var) for var in self.hash_formula])
-		self.hash = hashlib.sha224(self.hash_data).hexdigest()
+			self.hash_data += file.hash
+		self.hash = hashlib.sha224(self.hash_data.encode()).hexdigest()
 		return self.hash
 
+	# return in bytes
 	def CalculateSize(self):
 		self.size = 0
 		for folder in self.folders:
 			self.size += folder.size
-			for file in self.files:
-				self.size += file.size
-				return self.size
+		for file in self.files:
+			self.size += file.size
+		return self.size
+
+	def GetFOFNum(self):
+		self.FOLDERS_NUM = 0
+		self.FILES_NUM = 0
+		for folder in self.folders:
+			self.FOLDERS_NUM += 1
+			fof = folder.GetFOFNum()
+			self.FOLDERS_NUM += fof[0]
+			self.FILES_NUM += fof[1]
+		for file in self.files:
+			self.FILES_NUM += 1
+		return self.FOLDERS_NUM, self.FILES_NUM
 
 	def Save(self, path="data.pickle", compress=True, ignore_errors=False):
 		try:
@@ -251,14 +278,13 @@ class Folder:
 	# w = Overwrite
 	# r = Return
 	def Load(self, path="data.pickle", loading_action="w", uncompress=True, ignore_errors=False):
-		if not loading_action in ["w", "r"]:
-			raise ActionNotExist("\nLoading action \"%s\" does not exist" % loading_action)
+		self.SetArguments(required=False, loading_action=loading_action)
 		try:
 			if uncompress:
 				with zipfile.ZipFile(os.path.join(os.path.dirname(path), "%s.zip" % os.path.splitext(os.path.basename(path))[0]), "r") as f:
 					f.extract(os.path.basename(path), os.path.dirname(path))
 			with open(path, "rb") as f:
-				if loading_action == "w":
+				if self.loading_action == "w":
 					obj = pickle.load(f)
 					for var in self.__dict__:
 						setattr(self, var, getattr(obj, var))
@@ -293,55 +319,85 @@ class Folder:
 				self.structure += "\n"
 		return self.structure
 
-	# Virtual delete
-	# def Delete(self):
-		# self.__del__()
+	def Delete(self, ignore_errors=False, action_type="virtual"):
+		self.SetArguments(required=False, action_type=action_type)
+		if self.action_type == "virtual":
+			self.__del__()
+		else:
+			try:
+				shutil.rmtree(self.dir)
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot delete \"%s\" folder" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
+			return False
 
-	# Actual delete
-	def Delete(self, ignore_errors=True):
-		try:
-			shutil.rmtree(self.dir)
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot delete \"%s\" folder" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-		return False
+	def Rename(self, new_name, ignore_errors=False, action_type="virtual"):
+		self.SetArguments(required=False, action_type=action_type)
+		if self.action_type == "virtual":
+			self.name = new_name
+			self.dir = os.path.join(os.path.dirname(self.dir), self.name)
+			self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
+			self.CalculateHash()
+		else:
+			try:
+				shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
+				self.dir = os.path.join(os.path.dirname(self.dir), new_name)
+				self.CalculateHash()
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot rename \"%s\" folder" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
+			return False
 
-	def Rename(self, new_name, ignore_errors=True):
-		try:
-			shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
-			self.dir = os.path.join(os.path.dirname(self.dir), new_name)
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot rename \"%s\" folder" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-		return False
-
-	def Move(self, new_path, ignore_errors=True):
-		try:
-			shutil.move(self.dir, new_name)
-			self.dir = new_name
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot move \"%s\" folder" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-		return False
-
-	# Apply virtual changes
-	def Apply(self):
-		pass
+	def Move(self, new_path, ignore_errors=True, action_type="virtual"):
+		self.SetArguments(required=False, action_type=action_type)
+		if self.action_type == "virtual":
+			self.dir = os.path.join(new_path, self.name)
+			self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
+			self.CalculateHash()
+		else:
+			try:
+				shutil.move(self.dir, new_name)
+				self.dir = new_name
+				self.CalculateHash()
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot move \"%s\" folder" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
+			return False
 
 	def PrayToGod(self):
 		raise ERROR404("\n\nInstance \"God\" does not exist...\nDid you mean \"Dog\"?")
+
+	def IsInitialized(self):
+		if ".kokos" in os.listdir(os.getcwd()):
+			return False
+		return True
+
+	def init(self, overwrite=False):
+		if overwrite or not self.IsInitialized():
+			self.kokognore = [".kokos"]
+			if ".kokognore" in os.listdir(os.getcwd()):
+				try:
+					with open(os.path.join(os.getcwd(), ".kokognore"), "r") as f:
+						for fof in f.read():
+							if fof != "":
+								self.kokognore.append(fof)
+				except PermissionError:
+					raise PermissionDenied("\nCannot read from \"%s\" file" % ".kokognore")
+			self.Save(os.path.join(os.getcwd(), ".kokos"), compress=False)
+			return
+		raise CannotInitializeDirectory("\nDirectory cannot be initialized because a \"%s\" file already exists in it" % default_name)
 
 	def CheckInstanceValidation(self, other):
 		if not isinstance(other, (Folder, File)):
@@ -426,6 +482,11 @@ class Folder:
 	# bool()
 	def __bool__(self):
 		return self.folders != [] and self.files != []
+
+	# for fof in folder_object:
+	#	...
+	def __iter__(self):
+		return iter(self.folders + self.files)
 
 	def __repr__(self):
 		return self.name

@@ -19,10 +19,17 @@ class WrongArgumentType(Exception):
 	pass
 # ------------------------------------------------------------------------------
 
-# Other
+# Not exist
 # ------------------------------------------------------------------------------
 class FileNotExist(Exception):
 	pass
+
+class ActionNotExist(Exception):
+	pass
+# ------------------------------------------------------------------------------
+
+# Other
+# ------------------------------------------------------------------------------
 
 class PermissionDenied(Exception):
 	pass
@@ -44,6 +51,8 @@ class File:
 			try:
 				with open(self.dir, "r", errors="ignore") as f:
 					self.content = f.read()
+				if self.content == "":
+					self.content = None
 			except (PermissionError, UnicodeDecodeError):
 				self.content = None
 		else:
@@ -68,25 +77,28 @@ class File:
 			"max_file_size": [10000, [int]],
 			"max_depth": [3, [int]],
 			"overwrite": [False, [bool]],
+			"required": [True, [bool]],
 		}
 
-		# Check if all required arguments are passed
-		for key, value in self.arguments.items():
-			if value[0] == None and key not in kwargs:
-				raise ArgumentRequired("\nArgument \"%s\" is required" % key)
-
-		# overwrite all arguments to default
+		# Overwrite all arguments to default
 		if "overwrite" in kwargs and kwargs["overwrite"]:
-			for argument in self.arguments:
-				if self.arguments[argument][0] != None:
-					setattr(self, argument, self.arguments[argument][0])
+			for key, value in self.arguments.items():
+				setattr(self, key, value[0])
 
-		# set any passed arguments
+		# Check if all required arguments are passed
+		try:
+			if kwargs["required"]:
+				raise KeyError
+		except KeyError:
+			for key, value in self.arguments.items():
+				if value[0] == None and key not in kwargs:
+					raise ArgumentRequired("\nArgument \"%s\" is required" % key)
+
+		# Set any passed arguments
 		for key, value in kwargs.items():
 			if key not in self.arguments:
 				raise ArgumentNotExist("\nArgument \"%s\" does not exist" % (key))
 			if isinstance(value, tuple(self.arguments[key][1])):
-				# checks
 
 				# If an argument can be string or list and its not list, make it list
 				if list in self.arguments[key][1] and not isinstance(key, list):
@@ -131,6 +143,11 @@ class File:
 				if key == "adding_action":
 					value = value.lower()
 
+				if key == "action_type":
+					value = value.lower()
+					if value not in ["virtual", "actual"]:
+						raise ActionNotExist("\\nAction type \"%s\" for \"%s\" is incorrect" % (value, "action_type"))
+
 				# Set attribute
 				setattr(self, key, value)
 				continue
@@ -140,48 +157,63 @@ class File:
 		self.hash = hashlib.sha224(b"".join(str(data).encode() for data in [getattr(self, var) for var in self.hash_formula])).hexdigest()
 		return self.hash
 
-	# Virtual delete
-	# def Delete(self):
-	# 	self.__del__()
+	def Delete(self, ignore_errors=True, action_type="virtual"):
+		self.SetArguments(required=False, loading_action=loading_action)
+		if self.action_type == "virtual":
+			self.__del__()
+		else:
+			try:
+				os.remove(self.dir)
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot delete \"%s\" file" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
+			return False
 
-	# Actual delete
-	def Delete(self, ignore_errors=True):
-		try:
-			os.remove(self.dir)
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot delete \"%s\" file" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-		return False
+	def Rename(self, new_name, ignore_errors=True, action_type="virtual"):
+		self.SetArguments(required=False, loading_action=loading_action)
+		if self.action_type == "virtual":
+			self.name = new_name
+			self.ext = os.path.splitext(self.name)[1]
+			self.dir = os.path.join(os.path.dirname(self.dir), self.name)
+			self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
+			self.CalculateHash()
+		else:
+			try:
+				shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
+				self.dir = os.path.join(os.path.dirname(self.dir), new_name)
+				self.CalculateHash()
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot rename \"%s\" File" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
+			return False
 
-	def Rename(self, new_name, ignore_errors=True):
-		try:
-			shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
-			self.dir = os.path.join(os.path.dirname(self.dir), new_name)
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot rename \"%s\" File" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-		return False
-
-	def Move(self, new_path, ignore_errors=True):
-		try:
-			shutil.move(self.dir, new_path)
-			self.dir = new_path
-			return True
-		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot move \"%s\" File" % self.name)
-		except FileNotFoundError:
-			if not ignore_errors:
-				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-		return False
+	def Move(self, new_path, ignore_errors=True, action_type="virtual"):
+		self.SetArguments(required=False, action_type=action_type)
+		if self.action_type == "virtual":
+			self.dir = os.path.join(new_path, self.name)
+			self.modified = datetime.fromtimestamp(os.path.getmtime(self.dir))
+			self.CalculateHash()
+		else:
+			try:
+				shutil.move(self.dir, new_path)
+				self.dir = new_path
+				self.CalculateHash()
+				return True
+			except PermissionError:
+				if not ignore_errors:
+					raise PermissionDenied("\nCannot move \"%s\" File" % self.name)
+			except FileNotFoundError:
+				if not ignore_errors:
+					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
+			return False
 
 	def CheckInstanceValidation(self, other):
 		if not isinstance(other, (folder.Folder, File)):
