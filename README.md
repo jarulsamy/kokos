@@ -4,15 +4,20 @@ kokos is a multi-use Python package which includes all of my public Python packa
 
 Supports Python 3.
 
----
-Installation ([pip page](https://pypi.org/project/kokos/)):
-
-```
-pip install kokos
-```
-You can use it like a normal package or from the command like (see [examples.md](examples.md "examples.md")):
+## CPU Stress Test
 ```python
 from kokos import cpu_stress_test
 score = cpu_stress_test.Start()
 print(score)
 ```
+## FOF Management
+```python
+from kokos import Folder
+import os
+
+dir = os.getcwd()
+f = Folder(dir=dir)
+
+print(f)
+```
+See more in [examples](../examples)
