@@ -1,12 +1,12 @@
+# Test files
 __pycache__
-*.txt
 test*
 files
+old_fof
+notes
 old
-sudoku_backup
-fof_rewrite
-fof_management.py
-*.pickle
-data*
-.kokos
-benchmark*
+!*docs/MyDirectory/Notes
+!*docs/MyDirectory/Code/test.py
+
+# Features in progress
+in_progress
