@@ -5,9 +5,11 @@ By having only named arguments gives me the ability to add custom error handling
 This involves:
 * Wrong argument name
 * Wrong argument type
-* Wrong argument type
+* Wrong argument's element type
 * Required argument not passed
-* Not valid **adding_action**, **loading_action** and **action_type** option
+* Not valid **adding_action**
+* Not valid **loading_action**
+* Not valid **action_type**
 * Not valid **hash_formula**
 * Not valid directory
 

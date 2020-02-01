@@ -1,17 +1,14 @@
 import win32security
 from pywintypes import error as win32error
 import hashlib
-from threading import Thread
 from datetime import datetime
 from copy import copy
 import pickle
 import zipfile
+import shutil
 import inspect
 import os
-try:
-	from file import File
-except (ModuleNotFoundError, ImportError):
-	pass
+from . import file
 
 # Arguments
 # ------------------------------------------------------------------------------
@@ -49,6 +46,24 @@ class CannotUnpickleObject(Exception):
 	pass
 # ------------------------------------------------------------------------------
 
+# Cannot
+# ------------------------------------------------------------------------------
+class CannotZipObject(Exception):
+	pass
+
+class CannotInitializeDirectory(Exception):
+	pass
+
+class CannotTrackChanges(Exception):
+	pass
+
+class CannotCreateFile(Exception):
+	pass
+
+class CannotCreateFolder(Exception):
+	pass
+# ------------------------------------------------------------------------------
+
 # Other
 # ------------------------------------------------------------------------------
 class PermissionDenied(Exception):
@@ -60,16 +75,7 @@ class InstanceNotSupported(Exception):
 class WrongArgument(Exception):
 	pass
 
-class CannotZipObject(Exception):
-	pass
-
 class ERROR404(Exception):
-	pass
-
-class CannotInitializeDirectory(Exception):
-	pass
-
-class CannotTrackChanges(Exception):
 	pass
 # ------------------------------------------------------------------------------
 
@@ -92,9 +98,13 @@ class Folder:
 		for fof in os.listdir(self.dir):
 			try:
 				if os.path.isdir(os.path.join(self.dir, fof)):
-					Thread(target=self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth"))))
+					# Thread(target=self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth"))))
+
+					self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
+
+					# Thread(self.AddFolder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth"))).start()
 				elif os.path.isfile(os.path.join(self.dir, fof)):
-					self.files.append(File(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
+					self.files.append(file.File(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
 			# OSError (SError: [Errno 22] Invalid argument) is being raised when
 			# a 0-byte executable is trying to be accessed (if you using Windows
 			# check %HOMEPATH%\AppData\Local\Microsoft\WindowsApps).
@@ -116,6 +126,9 @@ class Folder:
 		self.GetFOFNum()
 		return self.folders, self.files
 
+	# def AddFolder(self, **kwargs):
+	# 	self.folders.append(Folder(**kwargs))
+
 	def SetArguments(self, **kwargs):
 
 		# Set default arguments (where None is required)
@@ -128,6 +141,8 @@ class Folder:
 			"max_depth": [3, [int]],
 			"overwrite": [False, [bool]],
 			"required": [True, [bool]],
+			"action_type": ["virtual", [str]],
+			"type": ["folder", [str]],
 		}
 
 		# Overwrite all arguments to default
@@ -202,7 +217,12 @@ class Folder:
 				if key == "action_type":
 					value = value.lower()
 					if value not in ["virtual", "actual"]:
-						raise ActionNotExist("\\nAction type \"%s\" for \"%s\" is incorrect" % (value, "action_type"))
+						raise ActionNotExist("\nAction type \"%s\" for \"%s\" is incorrect" % (value, key))
+
+				if key == "type":
+					value = value.lower()
+					if value not in ["folder", "file"]:
+						raise ActionNotExist("\nAction type \"%s\" for \"%s\" is incorrect" % (value, key))
 
 				# Set attribute
 				setattr(self, key, value)
@@ -253,31 +273,27 @@ class Folder:
 			self.FILES_NUM += 1
 		return self.FOLDERS_NUM, self.FILES_NUM
 
-	def Save(self, path="data.pickle", compress=True, ignore_errors=False):
+	def Save(self, path="data.pickle", compress=True):
 		try:
 			with open(path, "wb") as f:
 				pickle.dump(self, f)
 			if compress:
 				with zipfile.ZipFile(os.path.join(os.path.dirname(path), "%s.zip" % os.path.splitext(os.path.basename(path))[0]), "w", compression=zipfile.ZIP_DEFLATED) as f:
 					f.write(path, os.path.basename(path))
-				File(dir=path).Delete(ignore_errors=ignore_errors)
-			return True
+				file.File(dir=path).Delete()
+				return
 		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot write to \"%s\" file" % os.path.basename(path))
+			raise PermissionDenied("\nCannot write to \"%s\" file" % os.path.basename(path))
 		except pickle.PickleError:
-			if not ignore_errors:
-				raise CannotPickleObject("\nCannot pickle \"%s\" object" % __name__)
+			raise CannotPickleObject("\nCannot pickle \"%s\" object" % __name__)
 		except (zipfile.BadZipFile, zipfile.LargeZipFile):
-			if not ignore_errors:
-				raise CannotZipObject("\nSomething went wrong, cannot Zip \"%s\" object" % __name__)
+			raise CannotZipObject("\nSomething went wrong, cannot Zip \"%s\" object" % __name__)
 		if compress:
-			File(dir=path).Delete(ignore_errors=ignore_errors)
-		return False
+			file.File(dir=path).Delete()
 
 	# w = Overwrite
 	# r = Return
-	def Load(self, path="data.pickle", loading_action="w", uncompress=True, ignore_errors=False):
+	def Load(self, path="data.pickle", loading_action="w", uncompress=True):
 		self.SetArguments(required=False, loading_action=loading_action)
 		try:
 			if uncompress:
@@ -290,20 +306,16 @@ class Folder:
 						setattr(self, var, getattr(obj, var))
 					return
 				if uncompress:
-					File(dir=path).Delete(ignore_errors=ignore_errors)
+					file.File(dir=path).Delete()
 				return pickle.load(f)
 		except PermissionError:
-			if not ignore_errors:
-				raise PermissionDenied("\nCannot read from \"%s\" file" % os.path.basename(path))
+			raise PermissionDenied("\nCannot read from \"%s\" file" % os.path.basename(path))
 		except FileNotFoundError:
-			if not ignore_errors:
-				raise FileNotExist("\nFile \"%s\" does not exist" % os.path.basename(path))
+			raise FileNotExist("\nFile \"%s\" does not exist" % os.path.basename(path))
 		except pickle.UnpicklingError:
-			if not ignore_errors:
-				raise CannotUnpickleObject("\nCannot unpickle \"%s\" object" % __name__)
+			raise CannotUnpickleObject("\nCannot unpickle \"%s\" object" % __name__)
 		if uncompress:
-			File(dir=os.path.join(os.path.dirname(path), "%s.zip" % os.path.splitext(os.path.basename(path))[0])).Delete(ignore_errors=ignore_errors)
-		return False
+			file.File(dir=os.path.join(os.path.dirname(path), "%s.zip" % os.path.splitext(os.path.basename(path))[0])).Delete()
 
 	def CreateStructure(self, depth=0):
 		self.structure = "%s/" % self.name
@@ -319,23 +331,20 @@ class Folder:
 				self.structure += "\n"
 		return self.structure
 
-	def Delete(self, ignore_errors=False, action_type="virtual"):
+	def Delete(self, action_type="virtual"):
 		self.SetArguments(required=False, action_type=action_type)
 		if self.action_type == "virtual":
-			self.__del__()
+			del self
 		else:
 			try:
 				shutil.rmtree(self.dir)
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot delete \"%s\" folder" % self.name)
+				raise PermissionDenied("\nCannot delete \"%s\" folder" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-			return False
+				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
 
-	def Rename(self, new_name, ignore_errors=False, action_type="virtual"):
+	def Rename(self, new_name, action_type="virtual"):
 		self.SetArguments(required=False, action_type=action_type)
 		if self.action_type == "virtual":
 			self.name = new_name
@@ -347,16 +356,13 @@ class Folder:
 				shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
 				self.dir = os.path.join(os.path.dirname(self.dir), new_name)
 				self.CalculateHash()
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot rename \"%s\" folder" % self.name)
+				raise PermissionDenied("\nCannot rename \"%s\" folder" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-			return False
+				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
 
-	def Move(self, new_path, ignore_errors=True, action_type="virtual"):
+	def Move(self, new_path, action_type="virtual"):
 		self.SetArguments(required=False, action_type=action_type)
 		if self.action_type == "virtual":
 			self.dir = os.path.join(new_path, self.name)
@@ -367,22 +373,57 @@ class Folder:
 				shutil.move(self.dir, new_name)
 				self.dir = new_name
 				self.CalculateHash()
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot move \"%s\" folder" % self.name)
+				raise PermissionDenied("\nCannot move \"%s\" folder" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
-			return False
+				raise DirectoryNotExist("\nDirectory \"%s\" does not exist" % self.name)
+
+	def Create(self, path, action_type="virtual", type="folder"):
+		self.SetArguments(required=False, action_type=action_type, type=type)
+		if self.type == "folder":
+			if os.path.join(self.dir, path) in [folder.dir for folder in self.folders]:
+				raise CannotCreateFolder("\nA folder named \"%s\" already exists in \"%s\"" % (name, self.dir))
+		else:
+			if os.path.join(self.dir, path) in [file.dir for file in self.files]:
+				raise CannotCreateFile("\nA file named \"%s\" already exists in \"%s\"" % (name, self.dir))
+		try:
+			if self.type == "folder":
+				try:
+					os.mkdir(os.path.join(self.dir, path))
+
+					# add the new folder to the right object (virtual adding)
+					for folder in self.folders:
+						if folder.dir == os.path.join(self.dir, os.path.split(path)[0]):
+							folder.folders.append(Folder(dir=os.path.join(self.dir, path)))
+							break
+					return
+				except FileNotFoundError:
+					raise CannotCreateFolder("\nCannot create \"%s\" folder because \"%s\" does not exist" % (path, os.path.split(path)[0]))
+				except FileExistsError:
+					raise CannotCreateFolder("\nCannot create \"%s\" folder because already exists" % path)
+			else:
+				try:
+					open(os.path.join(self.dir, path), "w").close()
+
+					# add the new file to the right object (virtual adding)
+					for folder in self.folders:
+						if folder.dir == os.path.join(self.dir, os.path.split(path)[0]):
+							folder.files.append(file.File(dir=os.path.join(self.dir, path)))
+							break
+					return
+				except FileNotFoundError:
+					raise CannotCreateFile("\nCannot create \"%s\" %s because \"%s\" does not exist" % (path, self.type, os.path.split(path)[0]))
+		except PermissionError:
+			raise PermissionDenied("\nCannot create \"%s\" %s" % (self.name, self.type))
 
 	def PrayToGod(self):
 		raise ERROR404("\n\nInstance \"God\" does not exist...\nDid you mean \"Dog\"?")
 
 	def IsInitialized(self):
 		if ".kokos" in os.listdir(os.getcwd()):
-			return False
-		return True
+			return True
+		return False
 
 	def init(self, overwrite=False):
 		if overwrite or not self.IsInitialized():
@@ -395,13 +436,19 @@ class Folder:
 								self.kokognore.append(fof)
 				except PermissionError:
 					raise PermissionDenied("\nCannot read from \"%s\" file" % ".kokognore")
-			self.Save(os.path.join(os.getcwd(), ".kokos"), compress=False)
+			self.Save(os.path.join(os.getcwd(), ".kokos"))
 			return
-		raise CannotInitializeDirectory("\nDirectory cannot be initialized because a \"%s\" file already exists in it" % default_name)
+		raise CannotInitializeDirectory("\nDirectory cannot be initialized because a \"%s\" file already exists in it" % ".kokos")
 
 	def CheckInstanceValidation(self, other):
-		if not isinstance(other, (Folder, File)):
+		if not isinstance(other, (Folder, file.File)):
 			raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (type(other).__name__, inspect.stack()[1][3]))
+
+	def IsFolder(self):
+		return True
+
+	def IsFile(self):
+		return False
 
 	# ==
 	def __eq__(self, other):
@@ -418,7 +465,7 @@ class Folder:
 		self.CheckInstanceValidation(other)
 		if isinstance(other, Folder):
 			return other in self.folders
-		elif isinstance(other, File):
+		elif isinstance(other, file.File):
 			return other in self.files
 
 	# +

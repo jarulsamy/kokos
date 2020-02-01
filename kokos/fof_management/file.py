@@ -5,7 +5,7 @@ import hashlib
 import shutil
 from copy import copy
 import os
-import folder
+from . import folder
 
 # Arguments
 # ------------------------------------------------------------------------------
@@ -78,6 +78,7 @@ class File:
 			"max_depth": [3, [int]],
 			"overwrite": [False, [bool]],
 			"required": [True, [bool]],
+			"action_type": ["virtual", [str]],
 		}
 
 		# Overwrite all arguments to default
@@ -157,23 +158,20 @@ class File:
 		self.hash = hashlib.sha224(b"".join(str(data).encode() for data in [getattr(self, var) for var in self.hash_formula])).hexdigest()
 		return self.hash
 
-	def Delete(self, ignore_errors=True, action_type="virtual"):
-		self.SetArguments(required=False, loading_action=loading_action)
+	def Delete(self, action_type="virtual"):
+		self.SetArguments(required=False, action_type=action_type)
 		if self.action_type == "virtual":
-			self.__del__()
+			del self
 		else:
 			try:
 				os.remove(self.dir)
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot delete \"%s\" file" % self.name)
+				raise PermissionDenied("\nCannot delete \"%s\" file" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-			return False
+				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
 
-	def Rename(self, new_name, ignore_errors=True, action_type="virtual"):
+	def Rename(self, new_name, action_type="virtual"):
 		self.SetArguments(required=False, loading_action=loading_action)
 		if self.action_type == "virtual":
 			self.name = new_name
@@ -186,16 +184,13 @@ class File:
 				shutil.move(self.dir, os.path.join(os.path.dirname(self.dir), new_name))
 				self.dir = os.path.join(os.path.dirname(self.dir), new_name)
 				self.CalculateHash()
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot rename \"%s\" File" % self.name)
+				raise PermissionDenied("\nCannot rename \"%s\" File" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-			return False
+				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
 
-	def Move(self, new_path, ignore_errors=True, action_type="virtual"):
+	def Move(self, new_path, action_type="virtual"):
 		self.SetArguments(required=False, action_type=action_type)
 		if self.action_type == "virtual":
 			self.dir = os.path.join(new_path, self.name)
@@ -206,18 +201,21 @@ class File:
 				shutil.move(self.dir, new_path)
 				self.dir = new_path
 				self.CalculateHash()
-				return True
+				return
 			except PermissionError:
-				if not ignore_errors:
-					raise PermissionDenied("\nCannot move \"%s\" File" % self.name)
+				raise PermissionDenied("\nCannot move \"%s\" File" % self.name)
 			except FileNotFoundError:
-				if not ignore_errors:
-					raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
-			return False
+				raise FileNotExist("\nFile \"%s\" does not exist" % self.name)
 
 	def CheckInstanceValidation(self, other):
 		if not isinstance(other, (folder.Folder, File)):
 			raise InstanceNotSupported("\nInstance \"%s\" is not supported for \"%s\" operation" % (type(other).__name__, inspect.stack()[1][3]))
+
+	def IsFolder(self):
+		return False
+
+	def IsFile(self):
+		return True
 
 	# ==
 	def __eq__(self, other):
@@ -228,10 +226,6 @@ class File:
 	def __ne__(self, other):
 		self.CheckInstanceValidation(other)
 		return self.hash != other.hash
-
-	# bool()
-	def __bool__(self):
-		return os.path.isfile(self.dir)
 
 	def __repr__(self):
 		return self.name
