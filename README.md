@@ -3,11 +3,16 @@
 kokos is a multi-use Python package which includes all of my public Python packages.
 
 Supports Python 3.
-
+## Installation
+```
+git clone https://github.com/kokosxD/kokos
+```
 ## CPU Stress Test
 ```python
-from kokos import cpu_stress_test
-score = cpu_stress_test.Start()
+from kokos import Start
+
+score = Start()
+
 print(score)
 ```
 ## FOF Management
@@ -20,4 +25,4 @@ f = Folder(dir=dir)
 
 print(f)
 ```
-See more in [examples](../examples)
+See more in [examples](../docs)
