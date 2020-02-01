@@ -98,11 +98,7 @@ class Folder:
 		for fof in os.listdir(self.dir):
 			try:
 				if os.path.isdir(os.path.join(self.dir, fof)):
-					# Thread(target=self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth"))))
-
 					self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
-
-					# Thread(self.AddFolder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth"))).start()
 				elif os.path.isfile(os.path.join(self.dir, fof)):
 					self.files.append(file.File(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
 			# OSError (SError: [Errno 22] Invalid argument) is being raised when
@@ -125,9 +121,6 @@ class Folder:
 		self.CalculateSize()
 		self.GetFOFNum()
 		return self.folders, self.files
-
-	# def AddFolder(self, **kwargs):
-	# 	self.folders.append(Folder(**kwargs))
 
 	def SetArguments(self, **kwargs):
 
