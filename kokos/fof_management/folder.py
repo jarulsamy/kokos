@@ -9,6 +9,7 @@ import shutil
 import inspect
 import os
 from . import file
+from ..utils import PassArguments
 
 # Arguments
 # ------------------------------------------------------------------------------
@@ -98,10 +99,10 @@ class Folder:
 		for fof in os.listdir(self.dir):
 			try:
 				if os.path.isdir(os.path.join(self.dir, fof)):
-					self.folders.append(Folder(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
+					self.folders.append(Folder(dir=os.path.join(self.dir, fof), **PassArguments(self, "hash_formula", "adding_action", "max_file_size", "max_depth")))
 				elif os.path.isfile(os.path.join(self.dir, fof)):
-					self.files.append(file.File(dir=os.path.join(self.dir, fof), **self.PassArguments("hash_formula", "adding_action", "max_file_size", "max_depth")))
-			# OSError (SError: [Errno 22] Invalid argument) is being raised when
+					self.files.append(file.File(dir=os.path.join(self.dir, fof), **PassArguments(self, "hash_formula", "adding_action", "max_file_size", "max_depth", "max_file_size")))
+			# OSError (OSError: [Errno 22] Invalid argument) is being raised when
 			# a 0-byte executable is trying to be accessed (if you using Windows
 			# check %HOMEPATH%\AppData\Local\Microsoft\WindowsApps).
 			except (PermissionError, OSError):
@@ -149,7 +150,7 @@ class Folder:
 				raise KeyError
 		except KeyError:
 			for key, value in self.arguments.items():
-				if value[0] == None and key not in kwargs:
+				if not value[0] and key not in kwargs:
 					raise ArgumentRequired("\nArgument \"%s\" is required" % key)
 
 		# Set any passed arguments
@@ -159,8 +160,8 @@ class Folder:
 			if isinstance(value, tuple(self.arguments[key][1])):
 
 				# If an argument can be string or list and its not list, make it list
-				if list in self.arguments[key][1] and not isinstance(key, list):
-					value = list(value)
+				if list in self.arguments[key][1] and not isinstance(value, list):
+					value = [value]
 
 				# Check if directory is valid
 				if key == "dir":
@@ -171,7 +172,7 @@ class Folder:
 						raise DirectoryNotExist("\nDirectory can't be blank")
 
 				# Check if "hash_formula" elements are valid
-				if key == "hash_formula":
+				elif key == "hash_formula":
 					value = [data.lower() for data in value]
 					value.sort()
 					for data in copy(value):
@@ -196,23 +197,23 @@ class Folder:
 							raise WrongArgument("\nArgument element \"%s\" for \"%s\" is incorrect" % (data, value))
 
 				# Make adding_action lowercase
-				if key == "adding_action":
+				elif key == "adding_action":
 					value = value.lower()
 					if value not in ["w", "a", "s"]:
 						raise ActionNotExist("\nAdding action \"%s\" does not exist" % value)
 
 				# Check if "loading_action" is valid
-				if key == "loading_action":
+				elif key == "loading_action":
 					value = value.lower()
 					if value not in ["w", "r"]:
 						raise ActionNotExist("\nLoading action \"%s\" does not exist" % loading_action)
 
-				if key == "action_type":
+				elif key == "action_type":
 					value = value.lower()
 					if value not in ["virtual", "actual"]:
 						raise ActionNotExist("\nAction type \"%s\" for \"%s\" is incorrect" % (value, key))
 
-				if key == "type":
+				elif key == "type":
 					value = value.lower()
 					if value not in ["folder", "file"]:
 						raise ActionNotExist("\nAction type \"%s\" for \"%s\" is incorrect" % (value, key))
@@ -222,14 +223,14 @@ class Folder:
 				continue
 			raise WrongArgumentType("\nArgument type \"%s\" for \"%s\" is incorrect" % (type(value), value))
 
-	def PassArguments(self, *args):
-		arguments = {}
-		for argument in args:
-			if hasattr(self, argument):
-				arguments[argument] = getattr(self, argument)
-				continue
-			raise AttributeNotExist("\nAttribute \"%s\" does not exist" % argument)
-		return arguments
+	# def PassArguments(self, *args):
+	# 	arguments = {}
+	# 	for argument in args:
+	# 		if hasattr(self, argument):
+	# 			arguments[argument] = getattr(self, argument)
+	# 			continue
+	# 		raise AttributeNotExist("\nAttribute \"%s\" does not exist" % argument)
+	# 	return arguments
 
 	def CalculateHash(self):
 		self.hash_data = ""

@@ -47,7 +47,7 @@ class File:
 		self.name = os.path.basename(self.dir)
 		self.ext = os.path.splitext(self.name)[1]
 		self.size = os.path.getsize(self.dir)
-		if self.size < self.max_file_size:
+		if self.size <= self.max_file_size:
 			try:
 				with open(self.dir, "r", errors="ignore") as f:
 					self.content = f.read()
@@ -92,7 +92,7 @@ class File:
 				raise KeyError
 		except KeyError:
 			for key, value in self.arguments.items():
-				if value[0] == None and key not in kwargs:
+				if not value[0] and key not in kwargs:
 					raise ArgumentRequired("\nArgument \"%s\" is required" % key)
 
 		# Set any passed arguments
@@ -102,8 +102,8 @@ class File:
 			if isinstance(value, tuple(self.arguments[key][1])):
 
 				# If an argument can be string or list and its not list, make it list
-				if list in self.arguments[key][1] and not isinstance(key, list):
-					value = list(value)
+				if list in self.arguments[key][1] and not isinstance(value, list):
+					value = [value]
 
 				# If directory is not valid
 				if key == "dir":
@@ -114,7 +114,7 @@ class File:
 						raise FileNotExist("\nFile can't be blank")
 
 				# Check if "hash_formula" elements are valid
-				if key == "hash_formula":
+				elif key == "hash_formula":
 					value = [data.lower() for data in value]
 					value.sort()
 					for data in copy(value):
@@ -141,10 +141,10 @@ class File:
 							raise WrongArgument("\nArgument element \"%s\" for \"%s\" is incorrect" % (data, value))
 
 				# Make adding_action lowercase
-				if key == "adding_action":
+				elif key == "adding_action":
 					value = value.lower()
 
-				if key == "action_type":
+				elif key == "action_type":
 					value = value.lower()
 					if value not in ["virtual", "actual"]:
 						raise ActionNotExist("\\nAction type \"%s\" for \"%s\" is incorrect" % (value, "action_type"))

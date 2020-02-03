@@ -1,6 +1,6 @@
 ## Get File info
 Assuming that:
-* ```dir``` = ```"../MyDirectory```
+* ```dir``` = ```"../kokos/docs/MyDirectory```
 * ```f``` = ```Folder(dir=dir)```
 * ```file``` = ```f["other.txt"]```
 * ```test_file``` = ```f["Code"]["test.py"]```

@@ -1,6 +1,6 @@
 # kokos
 ---
-kokos is a multi-use Python package which includes all of my public Python packages.
+kokos is a multi-use Python package which includes many of my public Python projects.
 
 Supports Python 3.
 ## Installation

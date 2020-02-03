@@ -22,7 +22,7 @@ f = Folder(dir=dir)
 print(f)
 # MyDirectory
 ```
-All arguments need to be passed by name (see [why_only_named_arguments.md](../why_only_named_arguments.md)).
+All arguments need to be passed by name (see [why_only_named_arguments.md](../general/why_only_named_arguments.md)).
 ## Visualize the structure
 Get a list with all folders inside **f** as **Folder** objects
 ```python
@@ -49,7 +49,7 @@ print(f.CreateStructure())
 # │   └── dog.png
 # └── other.txt
 ```
-## Navigate through [FOF](../what_is_fof.md)
+## Navigate through [FOF](../general/what_is_fof.md)
 Loop thought folders
 ```python
 for folder in f.folders:
@@ -64,7 +64,7 @@ for file in f.files:
 	print(file)
 # other.txt
 ```
-Loop thought [FOF](../what_is_fof.md)
+Loop thought [FOF](../general/what_is_fof.md)
 ```python
 for fof in f:
 	print(fof)
@@ -73,7 +73,7 @@ for fof in f:
 # Photos
 # other.txt
 ```
-"Select" a [FOF](../what_is_fof.md)
+"Select" a [FOF](../general/what_is_fof.md)
 ```python
 # Folder object
 code_folder = f["Code"]
@@ -91,7 +91,7 @@ print(test_program.content)
 
 
 
-Get [FOF](../what_is_fof.md)'s data
+Get [FOF](../general/what_is_fof.md)'s data
 ```python
 for file in f["Code"]:
 	print("Name: %s\nSize: %s\nPermissions: %s\n\n" % (file.name, file.size, file.permissions))

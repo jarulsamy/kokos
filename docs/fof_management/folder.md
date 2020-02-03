@@ -1,6 +1,6 @@
 ## Get Folder info
 Assuming that:
-* ```dir``` = ```"../MyDirectory"```
+* ```dir``` = ```"../kokos/docs/MyDirectory```
 * ```f``` = ``Folder(dir=dir)``
 * ```f1``` = ```f["Code"]```
 * ```f2``` = ```f["Notes"]```
@@ -72,7 +72,7 @@ print(f.FILES_NUM)
 # 7
 ```
 ## Operations between Folders
-Note that all of the following changes are virtual and no actual [FOF](../what_is_fof.md) will be effected
+Note that all of the following changes are virtual and no actual [FOF](../general/what_is_fof.md) will be effected
 
 Check if 2 folders are equivalent
 ```python
@@ -84,7 +84,7 @@ Check if 2 folders are not equivalent
 print(f1 != f2)
 # True
 ```
-Check if a [FOF](../what_is_fof.md) is in a folder
+Check if a [FOF](../general/what_is_fof.md) is in a folder
 ```python
 print(test_program in f1)
 # True
@@ -100,17 +100,17 @@ for fof in f3:
 # test.py
 # notes.txt
 ```
-<!-- add subtract
-add +=
-add -= -->
-"Select" a [FOF](../what_is_fof.md) (return **None** if no [FOF](../what_is_fof.md) was found)
+<!-- add - -->
+<!-- add += -->
+<!-- add -= -->
+"Select" a [FOF](../general/what_is_fof.md) (return **None** if no [FOF](../general/what_is_fof.md) was found)
 ```python
 web_scraper = f1["amazon_web_scraper.py"]
 
 print(web_scraper.ext)
 # .py
 ```
-Get the number of [FOF](../what_is_fof.md) inside a **Folder**
+Get the number of [FOF](../general/what_is_fof.md) inside a **Folder**
 ```python
 # get files and folders
 print(len(f1))
