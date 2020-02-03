@@ -223,15 +223,6 @@ class Folder:
 				continue
 			raise WrongArgumentType("\nArgument type \"%s\" for \"%s\" is incorrect" % (type(value), value))
 
-	# def PassArguments(self, *args):
-	# 	arguments = {}
-	# 	for argument in args:
-	# 		if hasattr(self, argument):
-	# 			arguments[argument] = getattr(self, argument)
-	# 			continue
-	# 		raise AttributeNotExist("\nAttribute \"%s\" does not exist" % argument)
-	# 	return arguments
-
 	def CalculateHash(self):
 		self.hash_data = ""
 		for var in self.hash_formula:
