@@ -25,4 +25,14 @@ f = Folder(dir=dir)
 
 print(f)
 ```
+## Line counter
+```python
+from kokos import GetLines
+import os
+
+dir = os.getcwd()
+gl = GetLines(dir=dir)
+
+print(gl)
+```
 See more in [examples](../docs)
