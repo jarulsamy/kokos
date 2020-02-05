@@ -1,6 +1,6 @@
 # Test files
 __pycache__
-test*
+test.py
 files
 old_fof
 notes
