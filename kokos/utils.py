@@ -1,4 +1,5 @@
 from copy import copy
+import os
 try:
 	from .fof_management import AttributeNotExist
 except ImportError:
@@ -29,3 +30,10 @@ def Remove(old_list, *args):
 		if arg in new_list:
 			new_list.remove(arg)
 	return new_list
+
+# Returns a new directory X times back from the given
+def DirBack(old_dir, times):
+	new_dir = copy(old_dir)
+	for _ in range(times):
+		new_dir = os.path.split(new_dir)[0]
+	return os.path.realpath(new_dir)
